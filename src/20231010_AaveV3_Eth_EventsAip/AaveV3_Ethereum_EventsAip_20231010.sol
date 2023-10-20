@@ -6,7 +6,7 @@ import {AaveV3Ethereum, AaveV3EthereumAssets} from 'aave-address-book/AaveV3Ethe
 
 /**
  * @title Aave Events & Sponsorship Budget Proposal
- * @dev (1) Transfer GHO to Aave Co receiver address.
+ * @dev Transfer GHO to Aave Co receiver address.
  * @author AaveCo
  * - Snapshot: https://snapshot.org/#/aave.eth/proposal/0xdcb072d9782c5160d824ee37919c1be35024bd5aec579a86fdfc024f60213ca1
  * - Discussion: https://governance.aave.com/t/temp-check-aave-events-sponsorship-budget/14953
