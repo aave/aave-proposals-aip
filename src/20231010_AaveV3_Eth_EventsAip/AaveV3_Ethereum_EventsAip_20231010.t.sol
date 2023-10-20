@@ -7,7 +7,6 @@ import {ProtocolV2TestBase} from 'aave-helpers/ProtocolV2TestBase.sol';
 import {AaveV2Ethereum, AaveV2EthereumAssets} from 'aave-address-book/AaveV2Ethereum.sol';
 import {AaveV3Ethereum, AaveV3EthereumAssets} from 'aave-address-book/AaveV3Ethereum.sol';
 
-import {AaveV3_Ethereum_GHOFunding_20230926} from './AaveV3_GHO_Funding.sol';
 import {AaveMisc} from 'aave-address-book/AaveMisc.sol';
 import {IERC20} from 'solidity-utils/contracts/oz-common/interfaces/IERC20.sol';
 import {AaveV3_Ethereum_EventsAip_20231010} from './AaveV3_Ethereum_EventsAip_20231010.sol';
@@ -27,7 +26,7 @@ contract AaveV3_Ethereum_EventsAip_20231010_Test is ProtocolV2TestBase {
   uint256 public constant GHO_AMOUNT = 550_000e18;
 
   function setUp() public {
-    vm.createSelectFork(vm.rpcUrl('mainnet'), 18334762);
+    vm.createSelectFork(vm.rpcUrl('mainnet'), 18390065);
     proposal = new AaveV3_Ethereum_EventsAip_20231010();
   }
 
@@ -37,20 +36,43 @@ contract AaveV3_Ethereum_EventsAip_20231010_Test is ProtocolV2TestBase {
       COLLECTOR
     );
 
-    // Simulates having appropriate funds
+    // Simulates having appropriate funds in proxy
     // https://app.aave.com/governance/proposal/?proposalId=347
-    //0x121fE3fC3f617ACE9730203d2E27177131C4315e
+    // 0x121fE3fC3f617ACE9730203d2E27177131C4315e
+    // https://github.com/bgd-labs/aave-proposals/blob/545b17d8817e8aa86d99db94bfd1e4a2ae575f3d/src/20230926_AaveV3_Eth_GHOFunding/AaveV3_Ethereum_GHOFunding_20230926.t.sol#L39
+    uint256 daiBalanceProxyBefore = IERC20(AaveV2EthereumAssets.DAI_UNDERLYING).balanceOf(
+      0x0eB322ac55dB67a5cA0810BA0eDae3501b1B7263
+    );
+    uint256 simulatedSwapBalance = 370_000e18 +
+      IERC20(AaveV2EthereumAssets.DAI_A_TOKEN).balanceOf(COLLECTOR);
+
+    GovHelpers.passVoteAndExecute(vm, 347);
+
+    uint256 daiBalanceProxyAfter = IERC20(AaveV2EthereumAssets.DAI_UNDERLYING).balanceOf(
+      0x0eB322ac55dB67a5cA0810BA0eDae3501b1B7263
+    );
+
+    // 0.001e18 is 0.1%
+    assertApproxEqRel(daiBalanceProxyBefore + simulatedSwapBalance, daiBalanceProxyAfter, 0.001e18);
+
+    // assume DAI swapped for GHO
     deal(
       address(AaveV3EthereumAssets.GHO_UNDERLYING),
       COLLECTOR,
       GHO_AMOUNT + ghoBalanceBeforeFunding
     );
-
     uint256 ghoBalanceAfterFunding = IERC20(AaveV3EthereumAssets.GHO_UNDERLYING).balanceOf(
       COLLECTOR
     );
 
-    GovHelpers.executePayload(vm, address(payload), AaveGovernanceV2.SHORT_EXECUTOR);
     assertEq(ghoBalanceAfterFunding, ghoBalanceBeforeFunding + GHO_AMOUNT);
+
+    uint256 receiverBalanceBefore = IERC20(AaveV3EthereumAssets.GHO_UNDERLYING).balanceOf(RECEIVER);
+
+    GovHelpers.executePayload(vm, address(payload), AaveGovernanceV2.SHORT_EXECUTOR);
+
+    uint256 receiverBalanceAfter = IERC20(AaveV3EthereumAssets.GHO_UNDERLYING).balanceOf(RECEIVER);
+
+    assertEq(receiverBalanceAfter, receiverBalanceBefore + GHO_AMOUNT);
   }
 }
